@@ -3,7 +3,9 @@ H-I-H ( HIghlight Helper )
 
 ## What is it ?
 
-HIH Provide a command to ease vim highlighting
+HIH Provide a command to ease vim highlighting configuration
+
+The credit for the original idea ( an advanced *hi* command called *HI* ) goes to... someone else.
 
 
 ## How to use it ?
