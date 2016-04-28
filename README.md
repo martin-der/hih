@@ -19,13 +19,13 @@ It is possible to mimic some value of an other group.
 
 This is how to set the backgroup of *foo* like the background of *bar*
 ```vim
-HI foo - @bar bold
+HI foo - @bar -
 ```
 
 
-Let's set le *caution* group's background to yellow.
+Let's set le *caution* group's background to yellow. Also make the text bold.
 ```vim
-HI caution - yellow -
+HI caution - yellow bold
 ```
 
 
