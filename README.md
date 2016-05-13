@@ -17,7 +17,7 @@ HI my_group #FF0000 - -
 
 It is possible to mimic some value of an other group.
 
-This is how to set the backgroup of *foo* like the background of *bar*.
+This is how to set the background of *foo* like the background of *bar*.
 ```vim
 HI foo - @bar -
 ```
