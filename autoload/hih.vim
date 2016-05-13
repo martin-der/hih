@@ -20,8 +20,15 @@ function! HIHSetColor(group,color,target)
 
 		if a:color =~ '^@'
 			let linked_group = a:color[1:]
+			let modif = matchstr(linked_group,"^[1-90a-zA-Z]*([><].*)$")
+			if ! empty(modif)
+				let linked_group = matchstr(linked_group,"^([1-90a-zA-Z]*)[><].*$")
+			endif
 			let color_cterm=synIDattr(synIDtrans(hlID(linked_group)), a:target, 'cterm')
 			let color_gui=synIDattr(synIDtrans(hlID(linked_group)), a:target, 'gui')
+		"	if ! empty(modif)
+		"		let color_gui = s:change_lightness(color_gui,modif)
+		"	endif
 			if color_cterm != '' && color_gui != ''
 				execute 'highlight '.a:group.' cterm'.a:target.'='.color_cterm.' gui'.a:target.'='.color_gui
 			elseif color_cterm != ''
@@ -71,6 +78,57 @@ function! hih#doHighlight(group, fg, bg, fx, ...)
 	if a:0
 		execute 'highlight '.a:group.' '.join(a:000,' ')
 	endif
+endfunction
+
+function! s:change_lightness(color,lightness)
+	if a:lightness == 0
+		return a:color
+	endif
+
+	let r = str2nr('0x'.a:color[0:1],16)
+	let g = str2nr('0x'.a:color[2:3],16)
+	let b = str2nr('0x'.a:color[4:5],16)
+
+	if a:lightness > 0
+		let r = r + ( 255 - r ) * a:lightness
+		let g = g + ( 255 - g ) * a:lightness
+		let b = b + ( 255 - b ) * a:lightness
+	else
+		let r = r * ( 1 + a:lightness )
+		let g = g * ( 1 + a:lightness )
+		let b = b * ( 1 + a:lightness )
+	endif
+
+	let r=  float2nr(r)
+	let g = float2nr(g)
+	let b = float2nr(b)
+
+	if r > 255 | let r = 255 | elseif r < 0 | let r = 0 | endif	
+	if g > 255 | let g = 255 | elseif g < 0 | let g = 0 | endif	
+	if b > 255 | let b = 255 | elseif b < 0 | let b = 0 | endif	
+
+	return printf("%02x", r)
+		\ .printf("%02x", g)
+		\ .printf("%02x", b)
+
+endfunction
+
+function! s:percentOrRatio(value)
+	if a:value =~ '.*%$'
+		return str2float(a:value[:-2])
+	else
+		return str2float(a:value)
+	endif
+endfunction
+
+function! s:modifyColor(color,modification)
+	if a:modification =~ '^>l=.*'
+		let value = s:percetnOrRatio(a:modification[3:])
+	endif
+endfunction
+
+function! hih#modif(color,modification)
+	return s:modifyColor(a:color,a:modification)
 endfunction
 
 
