@@ -36,6 +36,10 @@ if !has('gui_running')
 endif
 
 
-command! -nargs=* 
+au! Syntax vim source syntax/hih.vim
+
+
+"command! -nargs=+ -complete=highlight
+command! -nargs=+
                 \ HI call hih#doHighlight(<f-args>)
 
