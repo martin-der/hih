@@ -20,26 +20,42 @@ function! HIHSetColor(group,color,target)
 
 		if a:color =~ '^@'
 			let linked_group = a:color[1:]
-			let modif = matchstr(linked_group,"^[1-90a-zA-Z]*([><].*)$")
+			let modif = matchstr(linked_group,'\v^[1-90a-zA-Z_]*\zs([\<\>].*)$')
 			if ! empty(modif)
-				let linked_group = matchstr(linked_group,"^([1-90a-zA-Z]*)[><].*$")
+				let linked_group = matchstr(linked_group,'\v^([1-90a-zA-Z_]*)\ze([\<\>].*)$')
 			endif
+
 			let color_cterm=synIDattr(synIDtrans(hlID(linked_group)), a:target, 'cterm')
 			let color_gui=synIDattr(synIDtrans(hlID(linked_group)), a:target, 'gui')
-		"	if ! empty(modif)
-		"		let color_gui = s:change_lightness(color_gui,modif)
-		"	endif
+
 			if color_cterm != '' && color_gui != ''
+				if ! empty(modif)
+					let color_gui = '#'.s:modify_color(color_gui[1:],modif)
+					let rgb = s:cterm2gui(color_cterm)
+					let rgb = s:modify_color(rgb[1:],modif)
+					let color_cterm = s:rgb2cterm(rgb)
+				endif
 				execute 'highlight '.a:group.' cterm'.a:target.'='.color_cterm.' gui'.a:target.'='.color_gui
 			elseif color_cterm != ''
+				if ! empty(modif)
+					let rgb = s:cterm2gui(color_cterm)
+					let rgb = s:modify_color(rgb[1:],modif)
+					let color_cterm = s:rgb2cterm(rgb)
+				endif
 				execute 'highlight '.a:group.' cterm'.a:target.'='.color_cterm
 			elseif color_gui != ''
+				if ! empty(modif)
+					let color_gui = '#'.s:modify_color(color_gui[1:],modif)
+				endif
 				execute 'highlight '.a:group.' gui'.a:target.'='.color_gui
 			endif
+
 		elseif a:color =~ '^#'
 			execute 'highlight '.a:group.' cterm'.a:target.'='.s:rgb2cterm(a:color).' gui'.a:target.'='.a:color
+
 		else
 			execute 'highlight '.a:group.' cterm'.a:target.'='.a:color.' gui'.a:target.'='.s:cterm2gui(a:color)
+
 		endif
 
 endfunction
@@ -113,18 +129,31 @@ function! s:change_lightness(color,lightness)
 
 endfunction
 
+" @return a float from the 'value' parameter
+" which can be
+"   either a float
+"   either a percentage (a number followed by '%')
 function! s:percentOrRatio(value)
 	if a:value =~ '.*%$'
-		return str2float(a:value[:-2])
+		return str2float(a:value[:-2])/100
 	else
 		return str2float(a:value)
 	endif
 endfunction
 
-function! s:modifyColor(color,modification)
+function! s:modify_color(color,modification)
 	if a:modification =~ '^>l=.*'
-		let value = s:percetnOrRatio(a:modification[3:])
+		let value = s:percentOrRatio(a:modification[3:])
+		return s:change_lightness(a:color,value)
 	endif
+
+	if a:modification =~ '^<l=.*'
+		let value = s:percentOrRatio(a:modification[3:])
+		return s:change_lightness(a:color,-1*value)
+	endif
+
+	echohl ErrorMsg | echon "Unknown color modification '".a:modification."'" | echohl Normal
+	return a:color
 endfunction
 
 function! hih#modif(color,modification)
