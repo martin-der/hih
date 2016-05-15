@@ -51,7 +51,7 @@ function! HIHSetColor(group,color,target)
 			endif
 
 		elseif a:color =~ '^#'
-			execute 'highlight '.a:group.' cterm'.a:target.'='.s:rgb2cterm(a:color).' gui'.a:target.'='.a:color
+			execute 'highlight '.a:group.' cterm'.a:target.'='.s:rgb2cterm(a:color[1:]).' gui'.a:target.'='.a:color
 
 		else
 			execute 'highlight '.a:group.' cterm'.a:target.'='.a:color.' gui'.a:target.'='.s:cterm2gui(a:color)
@@ -172,12 +172,8 @@ endfunction
 function! s:rgb2cterm(rgb_color)
 
 	let rgb_color = a:rgb_color
-	if a:rgb_color =~ '^#\?[a-fA-F01-9]\{6\}$'
-		if rgb_color =~ '^#'
-			let rgb_color = rgb_color[1:]
-		endif
-	else
-		throw "'".a:rgb_color."' is not a valid RGB color ( must match '^#?[a-fA-F01-9]{6}$')"
+	if ! ( a:rgb_color =~ '^[a-fA-F01-9]\{6\}$' )
+		throw "'".a:rgb_color."' is not a valid RGB color ( must match '^[a-fA-F01-9]{6}$')"
 	endif
 
 
