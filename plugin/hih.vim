@@ -36,7 +36,7 @@ if !has('gui_running')
 endif
 
 
-au! Syntax vim source syntax/hih.vim
+"au! Syntax vim source syntax/hih.vim
 
 
 "command! -nargs=+ -complete=highlight
