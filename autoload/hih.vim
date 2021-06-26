@@ -1,11 +1,10 @@
 
 
-" If another plugin calls an autoloaded HIH function on startup before the
-" plugin/hih.vim file got loaded, load it explicitly
 if exists(':HI') == 0
     runtime plugin/hih.vim
 endif
 
+let s:enable_italic=1
 
 
 " target : 'fg' or 'bg'
@@ -13,9 +12,9 @@ endif
 "      '#RRGGBB' for specifying a RGB color
 "      '<color_name>' for using a color name
 "      '@<hightlight_group>' for mimicing a group's color
-function! HIHSetColor(group,color,target)
-		if a:color == '-'
-			return
+function! hih#computeColor(color,target)
+		if a:color ==# '-'
+			return "NONE"
 		endif
 
 		if a:color =~ '^@'
@@ -28,65 +27,72 @@ function! HIHSetColor(group,color,target)
 			let color_cterm=synIDattr(synIDtrans(hlID(linked_group)), a:target, 'cterm')
 			let color_gui=synIDattr(synIDtrans(hlID(linked_group)), a:target, 'gui')
 
-			if color_cterm != '' && color_gui != ''
-				if ! empty(modif)
-					let color_gui = '#'.s:modify_color(color_gui[1:],modif)
-					let rgb = s:cterm2gui(color_cterm)
-					let rgb = s:modify_color(rgb[1:],modif)
-					let color_cterm = s:rgb2cterm(rgb)
-				endif
-				execute 'highlight '.a:group.' cterm'.a:target.'='.color_cterm.' gui'.a:target.'='.color_gui
+			let rgb_color = ''
+			if color_gui != ''
+				let rbg_color = color_gui[1:]
 			elseif color_cterm != ''
-				if ! empty(modif)
-					let rgb = s:cterm2gui(color_cterm)
-					let rgb = s:modify_color(rgb[1:],modif)
-					let color_cterm = s:rgb2cterm(rgb)
-				endif
-				execute 'highlight '.a:group.' cterm'.a:target.'='.color_cterm
-			elseif color_gui != ''
-				if ! empty(modif)
-					let color_gui = '#'.s:modify_color(color_gui[1:],modif)
-				endif
-				execute 'highlight '.a:group.' gui'.a:target.'='.color_gui
+				let rbg_color = s:cterm2gui(color_gui)
 			endif
 
+			if rgb_color != ''
+				if ! empty(modif)
+					let rgb_color = '#'.s:modify_color(color_gui[1:],modif)
+				endif
+			endif
+
+			return '#' . rgb_color
+
 		elseif a:color =~ '^#'
-			execute 'highlight '.a:group.' cterm'.a:target.'='.s:rgb2cterm(a:color[1:]).' gui'.a:target.'='.a:color
-
-		else
-			execute 'highlight '.a:group.' cterm'.a:target.'='.a:color.' gui'.a:target.'='.s:cterm2gui(a:color)
-
+			return a:color
 		endif
 
 endfunction
 
 
 function! hih#doHighlight(group, fg, bg, fx, ...)
+		" execute 'highlight '.a:group.' guifg=#a0a0a0 ctermbg=18'
+		" return
 
-	call HIHSetColor(a:group,a:fg,'fg')
+	let guic = ''
+	let ctermc = ''
 
-	call HIHSetColor(a:group,a:bg,'bg')
+	if a:fg != '-'
+		if s:isRGBColor(a:fg)
+			let guic = a:fg
+			let ctermc = hih#rgb2cterm(a:fg)
+		else
+			let guic = hih#cterm2gui(a:fg)
+			let ctermc = a:fg
+		endif
+		execute 'highlight '.a:group.' guifg='.l:guic.' ctermfg='.l:ctermc
+	endif
+
+	if a:bg != '-'
+		if s:isRGBColor(a:bg)
+			let guic = a:bg
+			let ctermc = hih#rgb2cterm(a:bg)
+		else
+			let guic = hih#cterm2gui(a:bg)
+			let ctermc = a:bg
+		endif
+		execute 'highlight '.a:group.' guibg='.l:guic.' ctermbg='.l:ctermc
+	endif
 
 	if a:fx != '-'
-		let fx = a:fx
-		if fx =~ '^@'
-			" FIXME : find out 'cterm' value
-			let fx=synIDattr(synIDtrans(hlID(fx[1:])), '', 'cterm')
-		endif
-	
-		if fx != ''
-		if fx =~ 'italic'
-			if g:hih_term_has_italic
-				let ctfx = fx
-				let gfx  = fx
+		if a:fx =~ 'italic'
+			if !s:enable_italic
+				let ctfx = substitute(a:fx,'italic','bold','g')
+				let gfx  = ctfx
+			" elseif s:term_has_italic
+				" let ctfx = a:fx
+				" let gfx  = a:fx
 			else
-				let ctfx = substitute(fx,'italic','bold','g')
-				let gfx  = fx
+				let ctfx = substitute(a:fx,'italic','bold','g')
+				let gfx  = a:fx
 			endif
-			execute 'highlight '.a:group.' term='.ctfx.' cterm='.ctfx.' gui='.gfx
+			execute 'highlight '.a:group.' term='.tfx.' cterm='.tfx.' gui='.gfx
 		else
-			execute 'highlight '.a:group.' term='.fx.' cterm='.fx.' gui='.fx
-		endif
+			execute 'highlight '.a:group.' term='.a:fx.' cterm='.a:fx.' gui='.a:fx
 		endif
 	endif
 
@@ -94,6 +100,38 @@ function! hih#doHighlight(group, fg, bg, fx, ...)
 	if a:0
 		execute 'highlight '.a:group.' '.join(a:000,' ')
 	endif
+
+	" call HIHSetColor(a:group,a:fg,'fg')
+
+	" call HIHSetColor(a:group,a:bg,'bg')
+
+	" if a:fx != '-'
+	" 	let fx = a:fx
+	" 	if fx =~ '^@'
+	" 		" FIXME : find out 'cterm' value
+	" 		let fx=synIDattr(synIDtrans(hlID(fx[1:])), '', 'cterm')
+	" 	endif
+	
+	" 	if fx != ''
+	" 	if fx =~ 'italic'
+	" 		if g:hih_term_has_italic
+	" 			let ctfx = fx
+	" 			let gfx  = fx
+	" 		else
+	" 			let ctfx = substitute(fx,'italic','bold','g')
+	" 			let gfx  = fx
+	" 		endif
+	" 		execute 'highlight '.a:group.' term='.ctfx.' cterm='.ctfx.' gui='.gfx
+	" 	else
+	" 		execute 'highlight '.a:group.' term='.fx.' cterm='.fx.' gui='.fx
+	" 	endif
+	" 	endif
+	" endif
+
+	" " Any additional arguments are simply passed along
+	" if a:0
+	" 	execute 'highlight '.a:group.' '.join(a:000,' ')
+	" endif
 endfunction
 
 function! s:change_lightness(color,lightness)
@@ -161,21 +199,29 @@ function! hih#modif(color,modification)
 endfunction
 
 
-function! s:cterm2gui(cterm_color)
-	if a:cterm_color =~ '[0123456789]\+'
-		return '#'.s:xterm_colors[a:cterm_color]
+
+
+
+
+" """""""""""""""""""""""
+
+
+
+function! hih#cterm2gui(color)
+	if a:color =~ '[0123456789]\+'
+		return '#'.s:xterm_colors[a:color]
 	endif
-	return a:cterm_color
+	return a:color
 endfunction
 
+function! hih#rgb2cterm(color)
 
-function! s:rgb2cterm(rgb_color)
-
-	let rgb_color = a:rgb_color
-	if ! ( a:rgb_color =~ '^[a-fA-F01-9]\{6\}$' )
-		throw "'".a:rgb_color."' is not a valid RGB color ( must match '^[a-fA-F01-9]{6}$')"
+	let rgb_color = a:color
+	if s:isRGBColor(a:color)
+		let rgb_color = s:cleanRGBColor(a:color[1:])
+	else
+		throw "'".a:color."' is not a valid RGB color ( must match '^#?[a-fA-F01-9]{6}$')"
 	endif
-
 
 	let xterm_color = 0
 	let previous_distance = 2.0*255*255*255
@@ -215,7 +261,28 @@ function! s:rgb2cterm(rgb_color)
 endfunction
 
 
-" seen here : http://www.calmar.ws/vim/256-xterm-24bit-rgb-color-chart.html
+function! s:isRGBColor(color)
+	if a:color =~ '^#\?[a-fA-F01-9]\{6\}$'
+		return 1
+	elseif a:color =~ '^#[a-fA-F01-9]\{3,6\}$'
+		return 1
+	else
+		return 0
+	endif
+endfunction
+function! s:cleanRGBColor(color)
+	let cc = a:color
+	if a:color =~ '^#'
+		let cc = a:color[1:]
+	endif
+	if len(cc) == 4 | return '00'.cc | endif
+	if len(cc) == 5 | return '0'.cc | endif
+	if len(cc) == 3 | return cc[0] . cc[0] . cc[1] . cc[1] .cc[2] . cc[2] | endif
+	return cc
+endfunction
+
+
+" http://www.calmar.ws/vim/256-xterm-24bit-rgb-color-chart.html
 let s:xterm_colors = {
 	\ '0':   '000000', '1':   '800000', '2':   '008000', '3':   '808000', '4':   '000080',
 	\ '5':   '800080', '6':   '008080', '7':   'c0c0c0', '8':   '808080', '9':   'ff0000',
@@ -269,5 +336,4 @@ let s:xterm_colors = {
 	\ '245': '8a8a8a', '246': '949494', '247': '9e9e9e', '248': 'a8a8a8', '249': 'b2b2b2',
 	\ '250': 'bcbcbc', '251': 'c6c6c6', '252': 'd0d0d0', '253': 'dadada', '254': 'e4e4e4',
 	\ '255': 'eeeeee', 'fg': 'fg', 'bg': 'bg', 'NONE': 'NONE' }
-
 

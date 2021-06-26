@@ -1,0 +1,8 @@
+# Test case
+Execute (test assertion):
+  %d
+  Assert 1 == line('$')
+
+  setf python
+  AssertEqual 'python', &filetype
+
