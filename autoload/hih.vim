@@ -4,7 +4,7 @@ if exists(':HI') == 0
     runtime plugin/hih.vim
 endif
 
-let s:enable_italic=1
+let s:term_has_italic=1
 
 
 " target : 'fg' or 'bg'
@@ -13,11 +13,17 @@ let s:enable_italic=1
 "      '<color_name>' for using a color name
 "      '@<hightlight_group>' for mimicing a group's color
 function! hih#computeColor(color,target)
+		let r = {}
+
 		if a:color ==# '-'
-			return "NONE"
+			let r.gui = 'NONE'
+			let r.term = 'NONE'
+			return r
 		endif
 
 		if a:color =~ '^@'
+		
+			return
 			let linked_group = a:color[1:]
 			let modif = matchstr(linked_group,'\v^[1-90a-zA-Z_]*\zs([\<\>].*)$')
 			if ! empty(modif)
@@ -27,73 +33,74 @@ function! hih#computeColor(color,target)
 			let color_cterm=synIDattr(synIDtrans(hlID(linked_group)), a:target, 'cterm')
 			let color_gui=synIDattr(synIDtrans(hlID(linked_group)), a:target, 'gui')
 
-			let rgb_color = ''
 			if color_gui != ''
-				let rbg_color = color_gui[1:]
+				let r.gui = color_gui
+				let r.term = hih#rgb2cterm(color_gui[1:])
 			elseif color_cterm != ''
-				let rbg_color = s:cterm2gui(color_gui)
+				let r.gui = hih#cterm2gui(color_cterm)
+				let r.term = color_cterm
+			else
+					throw "No color for target '".a:target."'"
 			endif
 
-			if rgb_color != ''
+			if s:isRGBColor(r.gui)
 				if ! empty(modif)
-					let rgb_color = '#'.s:modify_color(color_gui[1:],modif)
+					let r.gui = '#'.s:modify_color(s:cleanRGBColor(r.gui[1:]),modif)
 				endif
 			endif
 
-			return '#' . rgb_color
-
-		elseif a:color =~ '^#'
-			return a:color
+			return r
+		elseif s:isRGBColor(a:color)
+			let cleaned = s:cleanRGBColor(a:color[1:])
+			let r.gui = '#'.cleaned
+			let r.term = hih#rgb2cterm(cleaned)
+			return r
+		else
+			let r.gui = hih#cterm2gui(a:color)
+			let r.term = a:color
+			return r
 		endif
 
 endfunction
 
 
 function! hih#doHighlight(group, fg, bg, fx, ...)
-		" execute 'highlight '.a:group.' guifg=#a0a0a0 ctermbg=18'
-		" return
 
 	let guic = ''
 	let ctermc = ''
 
 	if a:fg != '-'
-		if s:isRGBColor(a:fg)
-			let guic = a:fg
-			let ctermc = hih#rgb2cterm(a:fg)
-		else
-			let guic = hih#cterm2gui(a:fg)
-			let ctermc = a:fg
-		endif
-		execute 'highlight '.a:group.' guifg='.l:guic.' ctermfg='.l:ctermc
+		let color = hih#computeColor(a:fg,'fg')
+		execute 'highlight ' . a:group . ' guifg=' . color['gui'] . ' ctermfg=' . color['term']
 	endif
 
 	if a:bg != '-'
-		if s:isRGBColor(a:bg)
-			let guic = a:bg
-			let ctermc = hih#rgb2cterm(a:bg)
-		else
-			let guic = hih#cterm2gui(a:bg)
-			let ctermc = a:bg
-		endif
-		execute 'highlight '.a:group.' guibg='.l:guic.' ctermbg='.l:ctermc
+		let color = hih#computeColor(a:bg,'bg')
+		execute 'highlight ' . a:group . ' guibg=' . color['gui'] . ' ctermbg=' . color['term']
 	endif
 
 	if a:fx != '-'
-		if a:fx =~ 'italic'
-			if !s:enable_italic
-				let ctfx = substitute(a:fx,'italic','bold','g')
-				let gfx  = ctfx
-			" elseif s:term_has_italic
-				" let ctfx = a:fx
-				" let gfx  = a:fx
-			else
-				let ctfx = substitute(a:fx,'italic','bold','g')
-				let gfx  = a:fx
+		let fxs = split(a:fx, ' ')
+		for ffx in fxs
+			if ffx != ''
+				if ffx ==? 'italic'
+					if !s:term_has_italic
+						let ctfx = substitute(a:fx,'italic','bold','g')
+						let gfx  = ctfx
+					elseif s:term_has_italic
+						let ctfx = a:fx
+						let gfx  = a:fx
+					else
+						let ctfx = substitute(a:fx,'italic','bold','g')
+						let gfx  = a:fx
+					endif
+					execute 'highlight '.a:group.' term='.ctfx.' gui='.gfx
+				else
+					execute 'highlight '.a:group.' term='.ffx.' gui='.ffx
+				endif
 			endif
-			execute 'highlight '.a:group.' term='.tfx.' cterm='.tfx.' gui='.gfx
-		else
-			execute 'highlight '.a:group.' term='.a:fx.' cterm='.a:fx.' gui='.a:fx
-		endif
+		endfor
+		execute 'highlight '.a:group.' term=bold gui=bold'
 	endif
 
 	" Any additional arguments are simply passed along
@@ -203,7 +210,7 @@ endfunction
 
 
 
-" """""""""""""""""""""""
+" ----------------------------------------
 
 
 
@@ -214,21 +221,24 @@ function! hih#cterm2gui(color)
 	return a:color
 endfunction
 
-function! hih#rgb2cterm(color)
+" @param color : a rgb color in the format 'RRGGBB' and without '#' prefix
+function! hih#rgb2cterm(color) abort
 
-	let rgb_color = a:color
-	if s:isRGBColor(a:color)
-		let rgb_color = s:cleanRGBColor(a:color[1:])
-	else
-		throw "'".a:color."' is not a valid RGB color ( must match '^#?[a-fA-F01-9]{6}$')"
+	if a:color =~ '^#'
+		throw "Invalid parameter '".a:color."' : No '#' prefix is allowed"
 	endif
+	if len(a:color) != 6
+		throw "Invalid parameter '".a:color."' : Must match 'RRGGBB' format"
+	endif
+
+	let rgb_color = a:color[:1]
 
 	let xterm_color = 0
 	let previous_distance = 2.0*255*255*255
 
-	let r_rgb = str2nr('0x'.rgb_color[0:1],16)
-	let g_rgb = str2nr('0x'.rgb_color[2:3],16)
-	let b_rgb = str2nr('0x'.rgb_color[4:5],16)
+	let r_rgb = str2nr('0x'.a:color[0:1],16)
+	let g_rgb = str2nr('0x'.a:color[2:3],16)
+	let b_rgb = str2nr('0x'.a:color[4:5],16)
 	
 	
 	let i = 0
@@ -236,7 +246,7 @@ function! hih#rgb2cterm(color)
 
 		let cterm_rgb_color = s:xterm_colors[''+i]
 
-		if cterm_rgb_color ==? rgb_color
+		if cterm_rgb_color ==? a:color
 			return i
 		endif
 
@@ -262,23 +272,21 @@ endfunction
 
 
 function! s:isRGBColor(color)
-	if a:color =~ '^#\?[a-fA-F01-9]\{6\}$'
+	if a:color =~ '^#[a-fA-F01-9]\{6\}$'
 		return 1
-	elseif a:color =~ '^#[a-fA-F01-9]\{3,6\}$'
+	elseif a:color =~ '^#[a-fA-F01-9]\{3\}$'
 		return 1
 	else
 		return 0
 	endif
 endfunction
-function! s:cleanRGBColor(color)
-	let cc = a:color
+function! s:cleanRGBColor(color) abort
 	if a:color =~ '^#'
-		let cc = a:color[1:]
+		throw "Expect color without '#'"
 	endif
-	if len(cc) == 4 | return '00'.cc | endif
-	if len(cc) == 5 | return '0'.cc | endif
-	if len(cc) == 3 | return cc[0] . cc[0] . cc[1] . cc[1] .cc[2] . cc[2] | endif
-	return cc
+
+	if len(a:color) == 3 | return a:color[0] . a:color[0] . a:color[1] . a:color[1] .a:color[2] . a:color[2] | endif
+	return a:color
 endfunction
 
 

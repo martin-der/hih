@@ -1,0 +1,165 @@
+Before (clear highlight):
+  highlight clear Foo
+  let guicfg = ''
+  let ctermcfg = ''
+  let guicbg = ''
+  let ctermcbg = ''
+  let italic = ''
+  let bold = ''
+  let undercurl = ''
+
+After (log highlight):
+  Log "guicfg = '".guicfg."'"
+  Log "ctermcfg = '".ctermcfg."'"
+  Log "guicbg = '".guicbg."'"
+  Log "ctermcbg = '".ctermcbg."'"
+  Log "italic = '".italic."'"
+  Log "bold = '".bold."'"
+  Log "undercurl = '".undercurl."'"
+"  echohl Foo | echo "this is Foo" | echohl None
+
+
+
+Execute (Grey on Red with '#' notation):
+  
+  call hih#doHighlight("Foo", '#a0a0a0', '#ff0000', '-')
+  
+  let guicfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'gui')
+  let ctermcfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'cterm')
+  let guicbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'gui')
+  let ctermcbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'cterm')
+  let bold = synIDattr(synIDtrans(hlID('Foo')), 'bold')
+  let undercurl = synIDattr(synIDtrans(hlID('Foo')), 'undercurl')
+
+  AssertEqual guicfg, '#a0a0a0', "Foo's gui fg is '#a0a0a0'"
+  AssertEqual ctermcfg, '247', "Foo's cterm fg is '247'"
+  AssertEqual guicbg, '#ff0000', "Foo's gui bg is '#ff0000'"
+  AssertEqual ctermcbg, '9', "Foo's cterm bg is '9'"
+  AssertEqual bold, '', 'bold is false'
+  AssertEqual undercurl, '', 'undercurl is false'
+
+
+
+Execute (Green on Black with '#' notation):
+  
+  call hih#doHighlight("Foo", '#00ff00', '#000000', '-')
+  
+  let guicfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'gui')
+  let ctermcfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'cterm')
+  let guicbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'gui')
+  let ctermcbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'cterm')
+  let bold = synIDattr(synIDtrans(hlID('Foo')), 'bold')
+  let undercurl = synIDattr(synIDtrans(hlID('Foo')), 'undercurl')
+
+  AssertEqual guicfg, '#00ff00', "Foo's gui fg is '#00ff00'"
+  AssertEqual ctermcfg, '10', "Foo's cterm fg is '10'"
+  AssertEqual guicbg, '#000000', "Foo's gui bg is '#000000'"
+  AssertEqual ctermcbg, '0', "Foo's cterm bg is '0'"
+  AssertEqual bold, '', 'bold is false'
+  AssertEqual undercurl, '', 'undercurl is false'
+
+
+
+Execute (Red on Black with '#' short notation):
+  
+  call hih#doHighlight("Foo", '#f00', '#000', '-')
+  
+  let guicfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'gui')
+  let ctermcfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'cterm')
+  let guicbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'gui')
+  let ctermcbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'cterm')
+  let bold = synIDattr(synIDtrans(hlID('Foo')), 'bold')
+  let undercurl = synIDattr(synIDtrans(hlID('Foo')), 'undercurl')
+
+  AssertEqual guicfg, '#ff0000', "Foo's gui fg is '#ff0000'"
+  AssertEqual ctermcfg, '9', "Foo's cterm fg is '9'"
+  AssertEqual guicbg, '#000000', "Foo's gui bg is '#000000'"
+  AssertEqual ctermcbg, '0', "Foo's cterm bg is '0'"
+  AssertEqual bold, '', 'bold is false'
+  AssertEqual undercurl, '', 'undercurl is false'
+
+
+
+Execute (Bold Green on Black with '#' notation):
+  
+  call hih#doHighlight("Foo", '#00ff00', '#000000', 'bold')
+
+  Log "avant set bold '". synIDattr(synIDtrans(hlID('Foo')), 'bold') . "'"
+  highlight Foo term=bold gui=bsld
+  Log "après set bold '". synIDattr(synIDtrans(hlID('Foo')), 'bold') . "'"
+
+  
+  let guicfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'gui')
+  let ctermcfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'cterm')
+  let guicbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'gui')
+  let ctermcbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'cterm')
+  let bold = synIDattr(synIDtrans(hlID('Foo')), 'bold')
+  let undercurl = synIDattr(synIDtrans(hlID('Foo')), 'undercurl')
+
+  AssertEqual guicfg, '#00ff00', "Foo's gui fg is '#00ff00'"
+  AssertEqual ctermcfg, '10', "Foo's cterm fg is '10'"
+  AssertEqual guicbg, '#000000', "Foo's gui bg is '#000000'"
+  AssertEqual ctermcbg, '0', "Foo's cterm bg is '0'"
+  AssertEqual bold, '1', 'bold is true'
+  AssertEqual undercurl, '', 'undercurl is false'
+
+
+
+Execute (Blue on Yellow with terminal color number):
+  
+  call hih#doHighlight("Foo", 12, 11, '-')
+  
+  let guicfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'gui')
+  let ctermcfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'cterm')
+  let guicbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'gui')
+  let ctermcbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'cterm')
+  let bold = synIDattr(synIDtrans(hlID('Foo')), 'bold')
+  let undercurl = synIDattr(synIDtrans(hlID('Foo')), 'undercurl')
+
+  AssertEqual guicfg, '#0000ff', "Foo's gui fg is '#0000ff'"
+  AssertEqual ctermcfg, '12', "Foo's cterm fg is '12'"
+  AssertEqual guicbg, '#ffff00', "Foo's gui bg is '#ffff00'"
+  AssertEqual ctermcbg, '11', "Foo's cterm bg is '11'"
+  AssertEqual bold, '', 'bold is false'
+  AssertEqual undercurl, '', 'undercurl is false'
+
+
+
+Execute (Cyan on DarkBlue with terminal color name):
+  
+  call hih#doHighlight("Foo", 'Cyan', 'DarkBlue', '-')
+  
+  let guicfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'gui')
+  let ctermcfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'cterm')
+  let guicbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'gui')
+  let ctermcbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'cterm')
+  let bold = synIDattr(synIDtrans(hlID('Foo')), 'bold')
+  let undercurl = synIDattr(synIDtrans(hlID('Foo')), 'undercurl')
+
+  AssertEqual guicfg, 'Cyan', "Foo's gui fg is 'Cyan'"
+  AssertEqual ctermcfg, 'Cyan', "Foo's cterm fg is 'Cyan'"
+  AssertEqual guicbg, 'DarkBlue', "Foo's gui bg is 'DarkBlue'"
+  AssertEqual ctermcbg, 'DarkBlue', "Foo's cterm bg is 'DarkBlue'"
+  AssertEqual bold, '', 'bold is false'
+  AssertEqual undercurl, '', 'undercurl is false'
+
+
+
+Execute (Undercurl Green on Blackish with '#' notation):
+  
+  call hih#doHighlight("Foo", '#00ff00', '#222222', 'undercurl')
+  
+  let guicfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'gui')
+  let ctermcfg = synIDattr(synIDtrans(hlID('Foo')), 'fg', 'cterm')
+  let guicbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'gui')
+  let ctermcbg = synIDattr(synIDtrans(hlID('Foo')), 'bg', 'cterm')
+  let undercurl = synIDattr(synIDtrans(hlID('Foo')), 'undercurl')
+
+  AssertEqual guicfg, '#00ff00', "Foo's gui fg is '#00ff00'"
+  AssertEqual ctermcfg, '10', "Foo's cterm fg is '10'"
+  AssertEqual guicbg, '#222222', "Foo's gui bg is '#222222'"
+  AssertEqual ctermcbg, '235', "Foo's cterm bg is '235'"
+  AssertEqual bold, '', 'bold is false'
+  AssertEqual undercurl, '1', 'undercurl is true'
+
+
