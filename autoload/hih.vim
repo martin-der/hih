@@ -6,6 +6,9 @@ endif
 
 let s:term_has_italic=1
 
+function s:logError(text)
+	echohl ErrorMsg | echom a:text | echohl None
+endfunction
 
 " target : 'fg' or 'bg'
 " color : 
@@ -23,7 +26,11 @@ function! hih#computeColor(color,target)
 
 		if a:color =~ '^@'
 		
-			return
+			let r.gui = 'NONE'
+			let r.term = 'NONE'
+			return r
+
+
 			let linked_group = a:color[1:]
 			let modif = matchstr(linked_group,'\v^[1-90a-zA-Z_]*\zs([\<\>].*)$')
 			if ! empty(modif)
@@ -71,12 +78,22 @@ function! hih#doHighlight(group, fg, bg, fx, ...)
 
 	if a:fg != '-'
 		let color = hih#computeColor(a:fg,'fg')
-		execute 'highlight ' . a:group . ' guifg=' . color['gui'] . ' ctermfg=' . color['term']
+		let hiParams = a:group . ' guifg=' . color['gui'] . ' ctermfg=' . color['term']
+		try 
+			execute 'highlight ' . hiParams
+		catch /.*/
+			call s:logError ( "Failed to highlight with " . hiParams . ' (' . v:exception. ')' )
+		endtry
 	endif
 
 	if a:bg != '-'
 		let color = hih#computeColor(a:bg,'bg')
-		execute 'highlight ' . a:group . ' guibg=' . color['gui'] . ' ctermbg=' . color['term']
+		let hiParams = a:group . ' guibg=' . color['gui'] . ' ctermbg=' . color['term']
+		try 
+			execute 'highlight ' . hiParams
+		catch /.*/
+			call s:logError ( "Failed to highlight with " . hiParams . ' (' . v:exception. ')' )
+	 	endtry
 	endif
 
 	if a:fx != '-'
@@ -94,10 +111,15 @@ function! hih#doHighlight(group, fg, bg, fx, ...)
 						let ctfx = substitute(a:fx,'italic','bold','g')
 						let gfx  = a:fx
 					endif
-					execute 'highlight '.a:group.' term='.ctfx.' gui='.gfx
+					let hiParams = a:group.' term='.ctfx.' gui='.gfx
 				else
-					execute 'highlight '.a:group.' term='.ffx.' gui='.ffx
+					let hiParams = a:group.' term='.ffx.' gui='.ffx
 				endif
+				try 
+					execute 'highlight ' . hiParams
+				catch /.*/
+					call s:logError ( "Failed to highlight with " . hiParams . ' (' . v:exception. ')' )
+				endtry
 			endif
 		endfor
 		execute 'highlight '.a:group.' term=bold gui=bold'
@@ -108,37 +130,6 @@ function! hih#doHighlight(group, fg, bg, fx, ...)
 		execute 'highlight '.a:group.' '.join(a:000,' ')
 	endif
 
-	" call HIHSetColor(a:group,a:fg,'fg')
-
-	" call HIHSetColor(a:group,a:bg,'bg')
-
-	" if a:fx != '-'
-	" 	let fx = a:fx
-	" 	if fx =~ '^@'
-	" 		" FIXME : find out 'cterm' value
-	" 		let fx=synIDattr(synIDtrans(hlID(fx[1:])), '', 'cterm')
-	" 	endif
-	
-	" 	if fx != ''
-	" 	if fx =~ 'italic'
-	" 		if g:hih_term_has_italic
-	" 			let ctfx = fx
-	" 			let gfx  = fx
-	" 		else
-	" 			let ctfx = substitute(fx,'italic','bold','g')
-	" 			let gfx  = fx
-	" 		endif
-	" 		execute 'highlight '.a:group.' term='.ctfx.' cterm='.ctfx.' gui='.gfx
-	" 	else
-	" 		execute 'highlight '.a:group.' term='.fx.' cterm='.fx.' gui='.fx
-	" 	endif
-	" 	endif
-	" endif
-
-	" " Any additional arguments are simply passed along
-	" if a:0
-	" 	execute 'highlight '.a:group.' '.join(a:000,' ')
-	" endif
 endfunction
 
 function! s:change_lightness(color,lightness)
